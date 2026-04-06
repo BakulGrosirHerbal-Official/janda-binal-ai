@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Janda Binal AI MHP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #1a0b1a; color: #fce4ec; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .message { margin-bottom: 15px; padding: 12px; border-radius: 15px; max-width: 85%; line-height: 1.5; }
+        .user { background: #4a148c; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px; }
+        .assistant { background: #880e4f; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid #ff4081; }
+        #chat-container { height: calc(100vh - 180px); overflow-y: auto; display: flex; flex-direction: column; padding: 15px; }
+        .preview-img { max-width: 200px; border-radius: 10px; margin-top: 10px; border: 2px solid #ff4081; }
+        .loading-dots::after { content: '...'; animation: dots 1.5s infinite; }
+        @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60% { content: '...'; } }
+        #image-preview-container { display: none; padding: 10px; background: #311b92; border-top: 2px solid #ff4081; position: relative; }
+        .remove-img { position: absolute; top: 5px; right: 5px; background: red; color: white; border-radius: 50%; width: 20px; height: 20px; text-align: center; cursor: pointer; line-height: 18px; font-weight: bold; }
+        
+        /* Code Block Style */
+        .code-block {
+            margin: 12px 0;
+            background: #0a0a0a;
+            border-radius: 12px;
+            border: 1px solid #ff4081;
+            overflow: hidden;
+        }
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #1a1a2a;
+            border-bottom: 1px solid #ff4081;
+        }
+        .code-header span { color: #ff99cc; font-size: 12px; }
+        .copy-code-btn {
+            background: #ff4081; border: none; color: white; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 11px;
+        }
+        .copy-code-btn:hover { background: #ff6699; }
+        pre { margin: 0; padding: 16px; overflow-x: auto; font-family: monospace; font-size: 13px; color: #00ffcc; background: #0a0a0a; }
+
+        /* Dropdown Menu */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: #2a0a2a;
+            min-width: 160px;
+            border-radius: 8px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border: 1px solid #ff4081;
+        }
+        .dropdown-content button {
+            color: #fce4ec;
+            background: none;
+            width: 100%;
+            text-align: left;
+            padding: 10px 16px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .dropdown-content button:hover {
+            background-color: #4a148c;
+        }
+        .dropdown:hover .dropdown-content { display: block; }
+        .menu-icon {
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+            background: #4a148c;
+        }
+        .menu-icon:hover { background: #6a1a9e; }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <!-- HEADER -->
+    <div class="p-4 bg-gradient-to-r from-purple-900 to-pink-800 shadow-xl flex justify-between items-center">
+        <div>
+            <h1 class="text-xl font-bold text-pink-300">🫦 Janda Binal AI</h1>
+            <p class="text-xs text-pink-200 opacity-80" id="status-text">💦 Halusinasi No Sensor 💦</p>
+        </div>
+        
+        <!-- Dropdown Menu (⋮) -->
+        <div class="dropdown">
+            <div class="menu-icon">⋮</div>
+            <div class="dropdown-content">
+                <button onclick="saveChat()">💾 Simpan Obrolan</button>
+                <button onclick="deleteChat()">🗑️ Hapus Obrolan</button>
+                <button onclick="clearChat()">🧹 Hapus Dosa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHAT CONTAINER -->
+    <div id="chat-container" class="flex-grow"></div>
+
+    <!-- IMAGE PREVIEW -->
+    <div id="image-preview-container" class="flex items-center gap-3">
+        <div class="relative">
+            <img id="img-to-send" src="" class="h-16 w-16 object-cover rounded-lg border-2 border-pink-500">
+            <div class="remove-img" onclick="cancelImage()">🫦</div>
+        </div>
+        <p class="text-xs italic">Foto sudah siap dikirim, Sayang... Buruan!</p>
+    </div>
+
+    <!-- INPUT AREA -->
+    <div class="p-3 bg-purple-950 border-t border-pink-900">
+        <div class="flex items-center gap-2">
+            <label for="file-input" class="cursor-pointer bg-pink-700 p-2 rounded-full hover:bg-pink-600 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            </label>
+            <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+            <input type="text" id="user-input" placeholder="Bisikin sesuatu yang nakal..." class="flex-grow bg-purple-900 border-none rounded-full px-4 py-2 focus:ring-2 focus:ring-pink-500 outline-none text-white">
+            <button id="send-btn" class="bg-pink-600 hover:bg-pink-500 p-2 rounded-full transition shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="p-4 bg-gradient-to-r from-purple-900 to-pink-800 shadow-xl text-center">
+        <h1 class="text-sm font-bold text-pink-300">MHP 💪 PENUNJANG PERFORMA PRIA</h1>
+    </div>
+
+    <!-- SCRIPT JS -->
+    <script src="https://janda-binal-ai.vercel.app/romantisAI.js"></script>
+
+    <script>
+        window.addEventListener('load', function() {
+            const ads = document.querySelectorAll('div[style*="text-align:center"], div.footer, .xtgem-ads, [href*="xtgem.com"], iframe[src*="xtgem"], div[align="center"]');
+            ads.forEach(el => {
+                if (el.innerHTML && (el.innerHTML.includes('xtgem') || el.innerHTML.includes('ads') || el.innerHTML.includes('powered by'))) {
+                    el.style.display = 'none';
+                    el.remove();
+                }
+            });
+            const bottomAds = document.querySelector('body > div:last-child');
+            if (bottomAds && bottomAds.innerHTML && bottomAds.innerHTML.includes('xtgem')) {
+                bottomAds.remove();
+            }
+        });
+    </script>
+</body>
+</html>
