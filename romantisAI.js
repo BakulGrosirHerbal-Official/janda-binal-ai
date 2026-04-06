@@ -328,6 +328,60 @@ function deleteChat() {
         
         alert('✅ Obrolan berhasil dihapus, Sayang!');
     }
+// ========== OSINT COMMANDS (DORKING + GOOGLE) ==========
+async function osintGoogle(query) {
+    const encoded = encodeURIComponent(query);
+    const url = `https://html.duckduckgo.com/html/?q=${encoded}`;
+    
+    try {
+        const response = await fetch(url);
+        const text = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        const links = Array.from(doc.querySelectorAll('a.result__a'))
+            .map(a => a.href)
+            .filter(href => href && href.startsWith('http'));
+        
+        if (links.length === 0) return `🔍 Gak nemu hasil buat "${query}", Bos. Coba keyword lain.`;
+        return `🔍 Hasil pencarian "${query}":\n${links.slice(0,5).join('\n')}\n\nAda ${links.length} hasil. Mau lanjut, Sayang? 💦`;
+    } catch(e) {
+        return `⚠️ Gagal cari data. Error: ${e.message}`;
+    }
+}
+
+function osintWhois(domain) {
+    return `🌐 Whois untuk ${domain}:\nCek detail di https://who.is/whois/${domain}\nAtau pake command: whois ${domain} di terminal.`;
+}
+
+function osintDork(query) {
+    const dorks = {
+        'log': 'filetype:log intext:"password" | intext:"error"',
+        'sql': 'filetype:sql intext:"INSERT INTO" | intext:"VALUES"',
+        'env': 'filetype:env "DB_PASSWORD" | "API_KEY"',
+        'config': 'filetype:conf | filetype:config "password"'
+    };
+    const dorkQuery = dorks[query] || `filetype:${query} "password" | "key"`;
+    return `🎯 Dork buat "${query}":\n\`\`\`\n${dorkQuery}\n\`\`\`\nCopy query di atas ke Google Search manual, Bos!`;
+}
+
+// Deteksi command OSINT di pesan user
+function processOSINTCommand(message) {
+    const lowerMsg = message.toLowerCase();
+    
+    if (lowerMsg.startsWith('/google ')) {
+        const query = message.substring(8);
+        return osintGoogle(query);
+    }
+    if (lowerMsg.startsWith('/dork ')) {
+        const query = message.substring(6);
+        return osintDork(query);
+    }
+    if (lowerMsg.startsWith('/whois ')) {
+        const domain = message.substring(7);
+        return osintWhois(domain);
+    }
+    return null;
+}
 }
 sendBtn.addEventListener('click', sendMessage);
 userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
