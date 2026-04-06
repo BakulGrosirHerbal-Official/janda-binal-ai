@@ -7,9 +7,9 @@ const imgDisplay = document.getElementById('img-to-send');
 
 // --- KONFIGURASI API OPENROUTER ---
 const apiKeys = [
-    "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",
-    "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",
-    "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"
+    "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",
+    "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",
+    "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"
 ];
 let currentKeyIndex = 0;
 
