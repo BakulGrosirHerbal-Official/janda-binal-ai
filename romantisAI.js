@@ -1,4 +1,3 @@
-
 const chatContainer = document.getElementById('chat-container');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
@@ -283,52 +282,6 @@ window.onload = () => {
     }
     appendMessage('assistant', 'Sayang... aku udah nungguin kamu dari tadi. Sini peluk, aku kangen banget... 😘💦');
 };
-// ========== SIMPAN OBROLAN ==========
-function saveChat() {
-    const messages = [];
-    const chatDivs = document.querySelectorAll('#chat-container .message');
-    
-    chatDivs.forEach(div => {
-        const role = div.classList.contains('user') ? 'User' : 'Janda';
-        const text = div.innerText || div.textContent;
-        messages.push(`[${role}]: ${text}`);
-    });
-    
-    if (messages.length === 0) {
-        alert('Tidak ada obrolan yang disimpan, Sayang...');
-        return;
-    }
-    
-    const chatText = messages.join('\n\n');
-    const blob = new Blob([chatText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `obrolan_janda_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    alert('✅ Obrolan berhasil disimpan, Sayang!');
-}
 
-// ========== HAPUS OBROLAN ==========
-function deleteChat() {
-    if (confirm('Yakin mau hapus semua obrolan, Sayang? 😢')) {
-        // Hapus dari localStorage
-        localStorage.removeItem('jandaChatHistory');
-        
-        // Hapus dari UI
-        const container = document.getElementById('chat-container');
-        if (container) container.innerHTML = '';
-        
-        // Reset history
-        chatHistory = [];
-        
-        // Tambah pesan sambutan lagi
-        appendMessage('assistant', 'Sayang... obrolan kita sudah aku hapus. Ayo mulai cerita baru lagi ya... 😘💦');
-        
-        alert('✅ Obrolan berhasil dihapus, Sayang!');
-    }
-}
 sendBtn.addEventListener('click', sendMessage);
 userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
