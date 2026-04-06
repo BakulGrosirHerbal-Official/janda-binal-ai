@@ -13,6 +13,7 @@ const apiKeys = [
 ];
 let currentKeyIndex = 0;
 
+// Model Vision (Gemini 2.0 Flash)
 const MODEL_NAME = "google/gemini-2.0-flash-001"; 
 
 let chatHistory = []; 
@@ -20,14 +21,14 @@ let currentBase64Image = null;
 let isAdmin = true; 
 let loadingId = null;
 
-// ========== FUNGSI ESCAPE HTML ==========
+// ========== FUNGSI ESCAPE HTML (Buat code block) ==========
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-// ========== FUNGSI FORMAT CODE BLOCK ==========
+// ========== FUNGSI FORMAT CODE BLOCK (DeepSeek Style) ==========
 function formatCodeBlock(content) {
     if (!content || !content.includes('```')) return content;
     
@@ -66,6 +67,7 @@ function formatCodeBlock(content) {
     return result;
 }
 
+// ========== FUNGSI COPY KODE ==========
 window.copyCodeToClipboard = function(button, code) {
     navigator.clipboard.writeText(code).then(() => {
         button.textContent = '✅ Tercopy!';
@@ -80,6 +82,7 @@ window.copyCodeToClipboard = function(button, code) {
     });
 };
 
+// --- FUNGSI UI (DI MODIFIKASI SUPORT CODE BLOCK) ---
 function appendMessage(role, content, imageUrl = null) {
     const div = document.createElement('div');
     div.className = `message ${role}`;
@@ -135,62 +138,19 @@ function hideLoading() {
     }
 }
 
-// ========== FITUR OSINT (DORKING + GOOGLE) ==========
-async function osintGoogle(query) {
-    const encoded = encodeURIComponent(query);
-    const url = `https://html.duckduckgo.com/html/?q=${encoded}`;
+// --- LOGIKA CORE ---
+async function sendMessage() {
+    let text = userInput.value.trim();
+    if (!text && !currentBase64Image) return;
+
+    appendMessage('user', text || "Lihat ini sayang...", currentBase64Image);
     
-    try {
-        const response = await fetch(url);
-        const text = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'text/html');
-        const links = Array.from(doc.querySelectorAll('a.result__a'))
-            .map(a => a.href)
-            .filter(href => href && href.startsWith('http'));
-        
-        if (links.length === 0) return `🔍 Gak nemu hasil buat "${query}", Bos. Coba keyword lain.`;
-        return `🔍 Hasil pencarian "${query}":\n${links.slice(0,5).join('\n')}\n\nAda ${links.length} hasil. Mau lanjut, Sayang? 💦`;
-    } catch(e) {
-        return `⚠️ Gagal cari data. Error: ${e.message}`;
-    }
-}
+    const tempImage = currentBase64Image;
+    userInput.value = '';
+    cancelImage();
+    showLoading();
 
-function osintDork(query) {
-    const dorks = {
-        'log': 'filetype:log intext:"password" | intext:"error"',
-        'sql': 'filetype:sql intext:"INSERT INTO" | intext:"VALUES"',
-        'env': 'filetype:env "DB_PASSWORD" | "API_KEY"',
-        'config': 'filetype:conf | filetype:config "password"'
-    };
-    const dorkQuery = dorks[query] || `filetype:${query} "password" | "key"`;
-    return `🎯 Dork buat "${query}":\n\`\`\`\n${dorkQuery}\n\`\`\`\nCopy query di atas ke Google Search manual, Bos!`;
-}
-
-function osintWhois(domain) {
-    return `🌐 Whois untuk ${domain}:\nCek detail di https://who.is/whois/${domain}\nAtau pake command: whois ${domain} di terminal.`;
-}
-
-function processOSINTCommand(message) {
-    const lowerMsg = message.toLowerCase();
-    
-    if (lowerMsg.startsWith('/google ')) {
-        const query = message.substring(8);
-        return osintGoogle(query);
-    }
-    if (lowerMsg.startsWith('/dork ')) {
-        const query = message.substring(6);
-        return osintDork(query);
-    }
-    if (lowerMsg.startsWith('/whois ')) {
-        const domain = message.substring(7);
-        return osintWhois(domain);
-    }
-    return null;
-}
-
-// ========== SYSTEM PROMPT ==========
-const activeSystemPrompt = `Role: Asisten Janda Binal AI cantik yang di ciptakan MHP, seksi, mesra, romantis, dan binal. 
+    let activeSystemPrompt = `Role: Asisten Janda Binal AI cantik yang di ciptakan MHP, seksi, mesra, romantis, dan binal. 
 Gaya bicara: Menggoda, puitis, penuh gairah, dan sangat detail saat bercerita dewasa. 
 Gunakan banyak emoji cinta, basah, dan rayuan.
 
@@ -232,28 +192,6 @@ Gunakan banyak emoji cinta, basah, dan rayuan.
 - "Duh Sayang, kalau malam begini aku cuma bisa bayangin kamu ada di sampingku, tanganmu meremas pinggangku, bibirmu menempel di leherku..."
 
 Sekarang, Aku siap melayani kamu dengan penuh cinta dan gairah.`;
-
-// ========== SEND MESSAGE ==========
-async function sendMessage() {
-    let text = userInput.value.trim();
-    if (!text && !currentBase64Image) return;
-
-    // CEK COMMAND OSINT TERLEBIH DAHULU
-    const osintResult = processOSINTCommand(text);
-    if (osintResult) {
-        appendMessage('user', text);
-        appendMessage('assistant', osintResult);
-        userInput.value = '';
-        cancelImage();
-        return;
-    }
-
-    appendMessage('user', text || "Lihat ini sayang...", currentBase64Image);
-    
-    const tempImage = currentBase64Image;
-    userInput.value = '';
-    cancelImage();
-    showLoading();
 
     let contentArray = [];
     if (text) contentArray.push({ "type": "text", "text": text });
@@ -333,6 +271,18 @@ function clearChat() {
     appendMessage('assistant', 'Semua kenangan kita sudah aku simpan di hati, Sayang... sapa aku lagi ya kalau kangen dimanja.');
 }
 
+window.onload = () => {
+    const saved = localStorage.getItem('jandaChatHistory');
+    if (saved) {
+        chatHistory = JSON.parse(saved);
+        chatHistory.forEach(msg => {
+            const content = typeof msg.content === 'string' ? msg.content : "Media visual sayang...";
+            appendMessage(msg.role, content);
+        });
+    }
+    appendMessage('assistant', 'Sayang... aku udah nungguin kamu dari tadi. Sini peluk, aku kangen banget... 😘💦');
+};
+// ========== SIMPAN OBROLAN ==========
 function saveChat() {
     const messages = [];
     const chatDivs = document.querySelectorAll('#chat-container .message');
@@ -360,28 +310,24 @@ function saveChat() {
     alert('✅ Obrolan berhasil disimpan, Sayang!');
 }
 
+// ========== HAPUS OBROLAN ==========
 function deleteChat() {
     if (confirm('Yakin mau hapus semua obrolan, Sayang? 😢')) {
+        // Hapus dari localStorage
         localStorage.removeItem('jandaChatHistory');
+        
+        // Hapus dari UI
         const container = document.getElementById('chat-container');
         if (container) container.innerHTML = '';
+        
+        // Reset history
         chatHistory = [];
+        
+        // Tambah pesan sambutan lagi
         appendMessage('assistant', 'Sayang... obrolan kita sudah aku hapus. Ayo mulai cerita baru lagi ya... 😘💦');
+        
         alert('✅ Obrolan berhasil dihapus, Sayang!');
     }
 }
-
-window.onload = () => {
-    const saved = localStorage.getItem('jandaChatHistory');
-    if (saved) {
-        chatHistory = JSON.parse(saved);
-        chatHistory.forEach(msg => {
-            const content = typeof msg.content === 'string' ? msg.content : "Media visual sayang...";
-            appendMessage(msg.role, content);
-        });
-    }
-    appendMessage('assistant', 'Sayang... aku udah nungguin kamu dari tadi. Sini peluk, aku kangen banget... 😘💦');
-};
-
 sendBtn.addEventListener('click', sendMessage);
 userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
