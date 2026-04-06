@@ -1,3 +1,4 @@
+
 const chatContainer = document.getElementById('chat-container');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
